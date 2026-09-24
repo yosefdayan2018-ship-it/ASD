@@ -273,6 +273,9 @@
   };
   // ↑↑↑ עד כאן ↑↑↑
 
+  if (JSON.stringify(firebaseConfig).includes("הדביקו-כאן")) {
+    alert("עוד לא הודבקו הגדרות Firebase בקובץ, ולכן ההתחברות לא תעבוד. ראו הסבר בשלב א.");
+  }
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const $ = id => document.getElementById(id);
@@ -288,6 +291,8 @@
     "auth/user-not-found": "לא נמצא חשבון עם האימייל הזה",
     "auth/popup-closed-by-user": "חלון Google נסגר לפני סיום ההתחברות",
     "auth/unauthorized-domain": "האתר הזה לא מאושר ב-Firebase (ראו הסבר)",
+    "auth/network-request-failed": "אין חיבור לשרת ההתחברות. בדקו שהדף פתוח מאתר ברשת (לא בתצוגה המקדימה בצ'אט), שהאינטרנט מחובר ושהגדרות Firebase הודבקו",
+    "auth/api-key-not-valid.-please-pass-a-valid-api-key.": "הגדרות Firebase לא הודבקו נכון בקובץ",
     "auth/operation-not-supported-in-this-environment": "ההתחברות עובדת רק כשהדף נמצא באתר ברשת, לא כקובץ במחשב"
   };
   const showErr = e => { $("authMsg").textContent = errors[e.code] || "שגיאה: " + e.message; };
