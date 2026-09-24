@@ -85,6 +85,48 @@
   .link { background: none; color: var(--muted); font-weight: 600; text-decoration: underline; padding: 6px; }
   .link:hover { background: none; color: var(--ink); }
   .hidden { display: none !important; }
+  /* ===== התחברות ===== */
+  .topbar {
+    position: fixed; top: 0; right: 0; left: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 16px; background: var(--card);
+    border-bottom: 1px solid var(--line); z-index: 10;
+  }
+  .topbar .who { font-weight: 600; color: var(--muted); }
+  .small-btn {
+    font: inherit; font-weight: 700; font-size: .95rem;
+    padding: 8px 16px; border-radius: 8px; cursor: pointer;
+    background: var(--accent); color: #fff; border: none; width: auto;
+  }
+  .small-btn.alt { background: #fff; color: var(--accent); border: 1.5px solid var(--accent); }
+  body { padding-top: 80px; }
+  .overlay {
+    position: fixed; inset: 0; background: rgba(28,42,58,.55);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px; z-index: 20;
+  }
+  .modal {
+    width: 100%; max-width: 400px; background: var(--card);
+    border-radius: 12px; padding: 26px 24px;
+  }
+  .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid var(--line); }
+  .tabs button {
+    flex: 1; background: none; color: var(--muted); border: none;
+    border-bottom: 3px solid transparent; margin-bottom: -2px;
+    border-radius: 0; padding: 10px; font-size: 1.05rem;
+  }
+  .tabs button.on { color: var(--accent); border-bottom-color: var(--accent); }
+  .tabs button:hover { background: none; color: var(--ink); }
+  .google {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: #fff; color: var(--ink); border: 1.5px solid var(--line);
+    margin-bottom: 16px;
+  }
+  .google:hover { background: var(--paper); }
+  .or { text-align: center; color: var(--muted); margin: 0 0 14px; }
+  .msg { min-height: 1.4em; margin: 10px 0 0; font-weight: 600; color: #b03a2e; }
+  .close { background: none; color: var(--muted); margin-top: 8px; padding: 8px; font-size: 1rem; }
+  .close:hover { background: none; color: var(--ink); }
   @media (max-width: 480px) {
     .row { flex-direction: column; gap: 0; }
     .wrap { padding: 28px 20px 24px; }
@@ -92,6 +134,46 @@
 </style>
 </head>
 <body>
+  <header class="topbar">
+    <span class="who" id="who">אורח</span>
+    <div>
+      <button class="small-btn" id="openLogin">התחברות / הרשמה</button>
+      <button class="small-btn alt hidden" id="logout">התנתקות</button>
+    </div>
+  </header>
+
+  <div class="overlay hidden" id="overlay">
+    <div class="modal">
+      <div class="tabs">
+        <button type="button" id="tabLogin" class="on">התחברות</button>
+        <button type="button" id="tabReg">הרשמה</button>
+      </div>
+
+      <button type="button" class="google" id="googleBtn">
+        <svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9 3.5l6.7-6.7C35.6 2.4 30.2 0 24 0 14.6 0 6.6 5.4 2.7 13.3l7.8 6C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4 7.1-10 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7c-.5-1.4-.8-3-.8-4.7s.3-3.2.8-4.7l-7.8-6C1 16.6 0 20.2 0 24s1 7.4 2.7 10.7l7.8-6z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.8 6C6.6 42.6 14.6 48 24 48z"/></svg>
+        המשך עם Google
+      </button>
+
+      <p class="or">או עם אימייל וסיסמה</p>
+
+      <div class="field hidden" id="nameField">
+        <label for="regName">שם</label>
+        <input id="regName" type="text">
+      </div>
+      <div class="field">
+        <label for="authEmail">אימייל</label>
+        <input id="authEmail" type="email" dir="ltr">
+      </div>
+      <div class="field">
+        <label for="authPass">סיסמה</label>
+        <input id="authPass" type="password" dir="ltr">
+      </div>
+
+      <button type="button" id="authSubmit">התחברות</button>
+      <p class="msg" id="authMsg"></p>
+      <button type="button" class="close" id="closeLogin">סגירה</button>
+    </div>
+  </div>
   <main class="wrap">
     <h1>צור קשר</h1>
     <p class="lead">השאירו פרטים והודעה, ונחזור אליכם בהקדם.</p>
@@ -176,6 +258,88 @@
     choose.classList.add("hidden");
     form.classList.remove("hidden");
   };
+</script>
+
+<!-- ===== התחברות עם Firebase ===== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script>
+  // ↓↓↓ כאן מדביקים את ההגדרות מ-Firebase (ראו הסבר) ↓↓↓
+  const firebaseConfig = {
+    apiKey: "הדביקו-כאן",
+    authDomain: "הדביקו-כאן",
+    projectId: "הדביקו-כאן",
+    appId: "הדביקו-כאן"
+  };
+  // ↑↑↑ עד כאן ↑↑↑
+
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const $ = id => document.getElementById(id);
+  let mode = "login";
+
+  const errors = {
+    "auth/invalid-email": "כתובת האימייל לא תקינה",
+    "auth/missing-password": "צריך להקליד סיסמה",
+    "auth/weak-password": "הסיסמה צריכה להיות לפחות 6 תווים",
+    "auth/email-already-in-use": "כבר יש חשבון עם האימייל הזה. נסו להתחבר",
+    "auth/invalid-credential": "אימייל או סיסמה שגויים",
+    "auth/wrong-password": "אימייל או סיסמה שגויים",
+    "auth/user-not-found": "לא נמצא חשבון עם האימייל הזה",
+    "auth/popup-closed-by-user": "חלון Google נסגר לפני סיום ההתחברות",
+    "auth/unauthorized-domain": "האתר הזה לא מאושר ב-Firebase (ראו הסבר)",
+    "auth/operation-not-supported-in-this-environment": "ההתחברות עובדת רק כשהדף נמצא באתר ברשת, לא כקובץ במחשב"
+  };
+  const showErr = e => { $("authMsg").textContent = errors[e.code] || "שגיאה: " + e.message; };
+
+  function setMode(m) {
+    mode = m;
+    $("tabLogin").classList.toggle("on", m === "login");
+    $("tabReg").classList.toggle("on", m === "reg");
+    $("nameField").classList.toggle("hidden", m === "login");
+    $("authSubmit").textContent = m === "login" ? "התחברות" : "הרשמה";
+    $("authMsg").textContent = "";
+  }
+  $("tabLogin").onclick = () => setMode("login");
+  $("tabReg").onclick = () => setMode("reg");
+  $("openLogin").onclick = () => $("overlay").classList.remove("hidden");
+  $("closeLogin").onclick = () => $("overlay").classList.add("hidden");
+
+  $("googleBtn").onclick = () =>
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(showErr);
+
+  $("authSubmit").onclick = async () => {
+    const email = $("authEmail").value.trim(), pass = $("authPass").value;
+    $("authMsg").textContent = "";
+    try {
+      if (mode === "login") {
+        await auth.signInWithEmailAndPassword(email, pass);
+      } else {
+        const r = await auth.createUserWithEmailAndPassword(email, pass);
+        const name = $("regName").value.trim();
+        if (name) { await r.user.updateProfile({ displayName: name }); updateBar(r.user); }
+      }
+    } catch (e) { showErr(e); }
+  };
+
+  $("logout").onclick = () => auth.signOut();
+
+  function updateBar(user) {
+    if (user) {
+      $("who").textContent = "שלום, " + (user.displayName || user.email);
+      $("openLogin").classList.add("hidden");
+      $("logout").classList.remove("hidden");
+      $("overlay").classList.add("hidden");
+      // ממלא אוטומטית את שם ואימייל בטופס צור קשר
+      if (!$("name").value && user.displayName) $("name").value = user.displayName;
+      if (!$("email").value && user.email) $("email").value = user.email;
+    } else {
+      $("who").textContent = "אורח";
+      $("openLogin").classList.remove("hidden");
+      $("logout").classList.add("hidden");
+    }
+  }
+  auth.onAuthStateChanged(updateBar);
 </script>
 </body>
 </html>
