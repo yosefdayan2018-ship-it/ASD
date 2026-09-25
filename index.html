@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>צור קשר</title>
+<title>תוכנת אוטובוסים</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;800&display=swap" rel="stylesheet">
 <style>
@@ -223,90 +223,12 @@
     </div>
   </div>
   <main class="wrap">
-    <h1>צור קשר</h1>
-    <p class="lead">השאירו פרטים והודעה, ונחזור אליכם בהקדם.</p>
+    <h1>תוכנת אוטובוסים</h1>
+    <p class="lead">להורדה והתקנה של התוכנה לחצו על הכפתור. לשאלות, התחברו ופתחו את הצ'אט 💬 בפינת המסך.</p>
 
-    <a class="btn" style="margin-bottom:28px" href="https://drive.google.com/uc?export=download&id=17pnsqzQiw_gYKFGePAV7QIis2bAkq5S-">⬇ הורדת תוכנת אוטובוסים</a>
-
-    <form action="https://formsubmit.co/0772292196ai@gmail.com" method="POST">
-      <!-- הגדרות FormSubmit -->
-      <input type="hidden" name="_subject" value="פנייה חדשה מטופס צור קשר">
-      <input type="hidden" name="_template" value="table">
-      <input type="hidden" name="_captcha" value="true">
-      <input type="text" name="_honey" class="hidden" tabindex="-1" autocomplete="off">
-
-      <div class="row">
-        <div class="field">
-          <label for="name">שם מלא <span class="req">*</span></label>
-          <input id="name" name="שם" type="text" required>
-        </div>
-        <div class="field">
-          <label for="phone">טלפון</label>
-          <input id="phone" name="טלפון" type="tel" dir="ltr">
-        </div>
-      </div>
-
-      <div class="field">
-        <label for="email">אימייל <span class="req">*</span></label>
-        <input id="email" name="email" type="email" dir="ltr" required>
-      </div>
-
-      <div class="field">
-        <label for="subject">נושא</label>
-        <input id="subject" name="נושא" type="text">
-      </div>
-
-      <div class="field">
-        <label for="message">הודעה <span class="req">*</span></label>
-        <textarea id="message" name="הודעה" required></textarea>
-      </div>
-
-      <button type="submit">שליחת הודעה</button>
-    </form>
-
-    <div id="choose" class="hidden">
-      <p class="lead" style="margin:0 0 14px">ההודעה מוכנה. בחרו איך לשלוח אותה:</p>
-      <a id="gmail" class="btn" target="_blank" rel="noopener">שליחה דרך Gmail</a>
-      <a id="mailapp" class="btn alt">שליחה דרך תוכנת המייל במחשב</a>
-      <button type="button" id="copy" class="btn alt">העתקת ההודעה</button>
-      <button type="button" id="back" class="link">חזרה לטופס</button>
-    </div>
+    <a class="btn" style="margin-bottom:0" href="https://drive.google.com/uc?export=download&id=17pnsqzQiw_gYKFGePAV7QIis2bAkq5S-">⬇ הורדת תוכנת אוטובוסים</a>
   </main>
 
-<script>
-  const TO = "0772292196ai@gmail.com";
-  const form = document.querySelector("form");
-  const choose = document.getElementById("choose");
-  // קובץ מהמחשב או תצוגה מקדימה – FormSubmit לא יעבוד, מציגים אפשרויות שליחה
-  const local = location.protocol === "file:" || window.self !== window.top;
-
-  form.addEventListener("submit", function (e) {
-    if (!local) return; // באתר אמיתי – שליחה רגילה דרך FormSubmit
-    e.preventDefault();
-    const v = id => document.getElementById(id).value.trim();
-    const subject = v("subject") || "פנייה חדשה מטופס צור קשר";
-    const body =
-      "שם: " + v("name") + "\n" +
-      "טלפון: " + v("phone") + "\n" +
-      "אימייל: " + v("email") + "\n\n" +
-      v("message");
-    const s = encodeURIComponent(subject), b = encodeURIComponent(body);
-    document.getElementById("gmail").href =
-      "https://mail.google.com/mail/?view=cm&fs=1&to=" + TO + "&su=" + s + "&body=" + b;
-    document.getElementById("mailapp").href = "mailto:" + TO + "?subject=" + s + "&body=" + b;
-    document.getElementById("copy").onclick = function () {
-      const text = "אל: " + TO + "\nנושא: " + subject + "\n\n" + body;
-      navigator.clipboard.writeText(text).then(() => { this.textContent = "ההודעה הועתקה"; });
-    };
-    form.classList.add("hidden");
-    choose.classList.remove("hidden");
-  });
-
-  document.getElementById("back").onclick = function () {
-    choose.classList.add("hidden");
-    form.classList.remove("hidden");
-  };
-</script>
 
 
   <!-- ===== צ'אט ===== -->
@@ -403,9 +325,6 @@
       $("openLogin").classList.add("hidden");
       $("logout").classList.remove("hidden");
       $("overlay").classList.add("hidden");
-      // ממלא אוטומטית את שם ואימייל בטופס צור קשר
-      if (!$("name").value && user.displayName) $("name").value = user.displayName;
-      if (!$("email").value && user.email) $("email").value = user.email;
     } else {
       $("who").textContent = "אורח";
       $("openLogin").classList.remove("hidden");
@@ -515,15 +434,23 @@
     $("chatInput").value = "";
     const ref = db.collection("chats").doc(openUid);
     const now = firebase.firestore.FieldValue.serverTimestamp();
+    const info = { updated: now, last: text.slice(0, 60) };
+    if (isAdmin) Object.assign(info, { unreadAdmin: false, unreadUser: true });
+    else Object.assign(info, { name: me.displayName || "", email: me.email || "", unreadAdmin: true });
+    // שני הכתיבות יחד – ההודעה מופיעה מיד בחלון
+    const batch = db.batch();
+    batch.set(ref, info, { merge: true });
+    batch.set(ref.collection("messages").doc(), { text, from: isAdmin ? "admin" : "user", ts: now });
+    const timeout = new Promise((_, rej) => setTimeout(() => rej({ code: "timeout" }), 12000));
     try {
-      const info = { updated: now, last: text.slice(0, 60) };
-      if (isAdmin) Object.assign(info, { unreadAdmin: false, unreadUser: true });
-      else Object.assign(info, { name: me.displayName || "", email: me.email || "", unreadAdmin: true });
-      await ref.set(info, { merge: true });
-      await ref.collection("messages").add({ text, from: isAdmin ? "admin" : "user", ts: now });
+      await Promise.race([batch.commit(), timeout]);
     } catch (e) {
-      $("chatInput").value = text;
-      alert("ההודעה לא נשלחה: " + e.code);
+      const why = {
+        "permission-denied": "אין הרשאה. צריך להדביק את הכללים (Rules) ב-Firestore וללחוץ פרסום.",
+        "not-found": "מסד הנתונים Firestore עוד לא נוצר ב-Firebase.",
+        "timeout": "אין חיבור לשרת ההודעות. ייתכן ש-Firestore עוד לא נוצר ב-Firebase, או שהסינון חוסם את firestore.googleapis.com."
+      }[e.code] || ("שגיאה: " + (e.code || e.message));
+      alert("ההודעה לא נשלחה.\n" + why);
     }
   }
   $("chatSendBtn").onclick = sendMsg;
