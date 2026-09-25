@@ -129,9 +129,16 @@
   .close:hover { background: none; color: var(--ink); }
   /* ===== צ'אט ===== */
   .chat-fab {
-    position: fixed; bottom: 20px; left: 20px; z-index: 15;
-    width: auto; border-radius: 30px; padding: 12px 22px;
-    box-shadow: 0 8px 20px -8px rgba(28,42,58,.6);
+    position: fixed; bottom: 22px; left: 22px; z-index: 15;
+    width: 62px; height: 62px; border-radius: 50%; padding: 0;
+    font-size: 1.8rem; line-height: 62px; text-align: center;
+    box-shadow: 0 8px 20px -6px rgba(28,42,58,.6);
+    transition: transform .15s;
+  }
+  .chat-fab:hover { transform: scale(1.08); }
+  .chat-fab .dot {
+    position: absolute; top: 2px; right: 2px; width: 16px; height: 16px;
+    background: #d9412f; border: 2px solid #fff; border-radius: 50%;
   }
   .chat-box {
     position: fixed; bottom: 20px; left: 20px; z-index: 16;
@@ -303,7 +310,7 @@
 
 
   <!-- ===== צ'אט ===== -->
-  <button type="button" class="chat-fab hidden" id="chatFab">💬 צ'אט</button>
+  <button type="button" class="chat-fab hidden" id="chatFab" title="צ'אט">💬<span class="dot hidden" id="chatDot"></span></button>
   <div class="chat-box hidden" id="chatBox">
     <div class="chat-head">
       <button type="button" id="chatBack" class="hidden" title="חזרה לרשימה">→</button>
@@ -411,19 +418,28 @@
   const ADMIN_EMAIL = "yosefdayan2018@gmail.com"; // המייל של בעל האתר
   const db = firebase.firestore();
   let me = null, isAdmin = false, openUid = null;
-  let stopList = null, stopMsgs = null;
+  let stopList = null, stopMsgs = null, stopDot = null;
 
   const fmt = ts => ts ? ts.toDate().toLocaleString("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
 
   function startChat(user) {
-    if (stopList) stopList(); if (stopMsgs) stopMsgs();
-    stopList = stopMsgs = null;
+    if (stopList) stopList(); if (stopMsgs) stopMsgs(); if (stopDot) stopDot();
+    stopList = stopMsgs = stopDot = null;
+    $("chatDot").classList.add("hidden");
     me = user;
     $("chatBox").classList.add("hidden");
     if (!user) { $("chatFab").classList.add("hidden"); return; }
     isAdmin = user.email === ADMIN_EMAIL && user.emailVerified;
-    $("chatFab").textContent = isAdmin ? "💬 הודעות מהמשתמשים" : "💬 צ'אט איתנו";
+    $("chatFab").title = isAdmin ? "הודעות מהמשתמשים" : "צ'אט איתנו";
     $("chatFab").classList.remove("hidden");
+    // נקודה אדומה על העיגול כשיש הודעה חדשה
+    if (isAdmin) {
+      stopDot = db.collection("chats").where("unreadAdmin", "==", true)
+        .onSnapshot(q => $("chatDot").classList.toggle("hidden", q.empty), () => {});
+    } else {
+      stopDot = db.collection("chats").doc(user.uid)
+        .onSnapshot(d => $("chatDot").classList.toggle("hidden", !(d.exists && d.data().unreadUser)), () => {});
+    }
   }
 
   $("chatFab").onclick = () => {
@@ -474,7 +490,7 @@
     $("chatMsgs").classList.remove("hidden");
     $("chatSend").classList.remove("hidden");
     const ref = db.collection("chats").doc(uid);
-    if (isAdmin) ref.set({ unreadAdmin: false }, { merge: true }).catch(() => {});
+    ref.set(isAdmin ? { unreadAdmin: false } : { unreadUser: false }, { merge: true }).catch(() => {});
     stopMsgs = ref.collection("messages").orderBy("ts").onSnapshot(snap => {
       const box = $("chatMsgs");
       box.innerHTML = snap.empty ? '<p class="chat-empty">' + (isAdmin ? "אין הודעות" : "כתבו לנו הודעה ונענה בהקדם") + "</p>" : "";
@@ -501,7 +517,7 @@
     const now = firebase.firestore.FieldValue.serverTimestamp();
     try {
       const info = { updated: now, last: text.slice(0, 60) };
-      if (isAdmin) info.unreadAdmin = false;
+      if (isAdmin) Object.assign(info, { unreadAdmin: false, unreadUser: true });
       else Object.assign(info, { name: me.displayName || "", email: me.email || "", unreadAdmin: true });
       await ref.set(info, { merge: true });
       await ref.collection("messages").add({ text, from: isAdmin ? "admin" : "user", ts: now });
