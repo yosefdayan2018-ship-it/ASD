@@ -112,8 +112,6 @@
   .btn:hover { filter: brightness(1.1); }
   .btn.alt { background: none; border: 1px solid var(--line); color: var(--ink); }
   .btn.alt:hover { background: var(--card2); filter: none; }
-  .dl-msg { margin: 10px 0 0; font-size: .95em; line-height: 1.5; color: #b3261e; }
-  .dl-msg.ok { color: inherit; }
 
   footer { text-align: center; color: var(--muted); font-size: .9rem; padding: 24px 20px 40px; border-top: 1px solid var(--line); }
 
@@ -191,6 +189,17 @@
   .bubble time { display: block; font-size: .75rem; opacity: .7; margin-top: 2px; }
   .chat-empty { text-align: center; color: var(--muted); margin-top: 30px; }
   .chat-send { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--line); background: var(--card); }
+  .chat-send .attach {
+    background: var(--card2) !important; border: 1px solid var(--line) !important;
+    font-size: 1.25rem; padding: 0 12px !important;
+  }
+  .bubble img { display: block; max-width: 100%; max-height: 220px; border-radius: 8px; margin-bottom: 4px; cursor: zoom-in; }
+  .bubble .file {
+    display: flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 700;
+    background: rgba(255,255,255,.12); padding: 8px 10px; border-radius: 8px; margin-bottom: 4px;
+  }
+  .bubble .file small { display: block; font-weight: 400; opacity: .8; }
+  .chat-sending { text-align: center; color: var(--muted); font-size: .9rem; padding: 4px; }
   .chat-send textarea { min-height: 44px; height: 44px; resize: none; padding: 10px; }
   .chat-send button {
     border: none; border-radius: 8px; padding: 0 16px; font-weight: 700; color: #fff;
@@ -292,8 +301,7 @@
             <span>🖥 Windows</span>
             <span>📶 עובד אופליין</span>
           </div>
-          <button type="button" class="btn" id="dlBtn">⬇ הורדה והתקנה</button>
-          <p class="dl-msg hidden" id="dlMsg"></p>
+          <a class="btn" href="https://drive.google.com/uc?export=download&id=17pnsqzQiw_gYKFGePAV7QIis2bAkq5S-">⬇ הורדה והתקנה</a>
           <button type="button" class="btn alt" id="cardHelp">💬 שאלה? פתחו צ'אט</button>
         </div>
       </article>
@@ -317,6 +325,8 @@
     <div class="chat-msgs" id="chatMsgs"></div>
     <div class="chat-send" id="chatSend">
       <textarea id="chatInput" placeholder="כתבו הודעה..."></textarea>
+      <button type="button" class="attach" id="chatAttach" title="צירוף קובץ או תמונה">📎</button>
+      <input type="file" id="chatFile" class="hidden">
       <button type="button" id="chatSendBtn">שליחה</button>
     </div>
   </div>
@@ -375,7 +385,7 @@
   $("closeLogin").onclick = () => $("overlay").classList.add("hidden");
 
   $("googleBtn").onclick = () =>
-    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(notifyGoogleLogin).catch(showErr);
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(showErr);
 
   $("authSubmit").onclick = async () => {
     const email = $("authEmail").value.trim(), pass = $("authPass").value;
@@ -410,60 +420,13 @@
   }
   auth.onAuthStateChanged(user => { updateBar(user); startChat(user); });
 
-  /* ===== הורדה: רק למי שהתחבר עם Google ונמצא ברשימה ===== */
-  const DOWNLOAD_URL = "https://drive.google.com/file/d/11BYXSRwbtfB_ez53GUSh5HeqAffxUAI2/view";
-  // ↓↓↓ כאן מוסיפים את המיילים שמותר להם להוריד (באותיות קטנות, בין מירכאות, עם פסיק) ↓↓↓
-  const ALLOWED_EMAILS = [
-    "yosefdayan2018@gmail.com",
-  ];
-  function dlSay(text, ok) {
-    $("dlMsg").textContent = text;
-    $("dlMsg").classList.toggle("ok", !!ok);
-    $("dlMsg").classList.remove("hidden");
-  }
-  $("dlBtn").onclick = () => {
-    const user = auth.currentUser;
-    if (!user) {
-      $("overlay").classList.remove("hidden");
-      $("tabLogin").click();
-      $("authMsg").textContent = "כדי להוריד צריך להתחבר עם Google";
-      return;
-    }
-    const withGoogle = user.providerData.some(p => p.providerId === "google.com");
-    if (!withGoogle) {
-      dlSay("ההורדה פתוחה רק למי שהתחבר עם Google. התנתקו והתחברו שוב בכפתור Google.");
-      return;
-    }
-    const email = (user.email || "").toLowerCase();
-    if (!ALLOWED_EMAILS.map(e => e.toLowerCase()).includes(email)) {
-      dlSay("למייל " + email + " עוד אין הרשאת הורדה. כתבו לנו בצ'אט ונוסיף אתכם.");
-      return;
-    }
-    dlSay("ההורדה נפתחת בחלון חדש. אם Google מבקש, בחרו את החשבון " + email + ".", true);
-    window.open(DOWNLOAD_URL, "_blank", "noopener");
-  };
-  auth.onAuthStateChanged(() => $("dlMsg").classList.add("hidden"));
-
-  /* ===== מייל למשתמש שהתחבר עם Google (נשלח מחשבון נפרד דרך Google Apps Script) ===== */
-  // ↓↓↓ כאן מדביקים את כתובת ה-Web app מ-Apps Script (ראו הסבר) ↓↓↓
-  const MAIL_SCRIPT_URL = "הדביקו-כאן-את-כתובת-הסקריפט";
-  const OWNER_EMAIL = "yosefdayan2018@gmail.com"; // כשאתה מתחבר לא נשלח מייל
-  function notifyGoogleLogin(res) {
-    const u = res && res.user;
-    if (!u || !u.email || u.email.toLowerCase() === OWNER_EMAIL) return;
-    if (!MAIL_SCRIPT_URL.startsWith("https://")) return;
-    const allowed = ALLOWED_EMAILS.map(e => e.toLowerCase()).includes(u.email.toLowerCase());
-    fetch(MAIL_SCRIPT_URL, {
-      method: "POST",
-      mode: "no-cors",
-      body: JSON.stringify({ email: u.email, name: u.displayName || "", allowed })
-    }).catch(() => {});
-  }
-
   /* ===== צ'אט: משתמשים כותבים, המנהל רואה ועונה ===== */
   const ADMIN_EMAIL = "yosefdayan2018@gmail.com"; // המייל של בעל האתר
+  // ↓ כתובת שרת המיילים (Apps Script). כל עוד ריק – לא נשלחות התראות במייל
+  const MAIL_URL = "";
   const db = firebase.firestore();
-  let me = null, isAdmin = false, openUid = null;
+  let me = null, isAdmin = false, openUid = null, openEmail = "", openName = "";
+  const lastMailed = {}; // לא לשלוח יותר ממייל אחד לאותה שיחה כל 5 דקות
   let stopList = null, stopMsgs = null, stopDot = null;
 
   const fmt = ts => ts ? ts.toDate().toLocaleString("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : "";
@@ -520,16 +483,16 @@
         b.innerHTML = "<span></span><small></small>";
         b.firstChild.textContent = (c.unreadAdmin ? "🔵 " : "") + (c.name || c.email);
         b.lastChild.textContent = (c.last || "") + " · " + fmt(c.updated);
-        b.onclick = () => openChat(d.id, c.name || c.email);
+        b.onclick = () => openChat(d.id, c.name || c.email, c.email, c.name);
         list.appendChild(b);
       });
     }, err => { $("chatList").innerHTML = '<p class="chat-empty">שגיאה בטעינה: ' + err.code + '</p>'; });
   }
 
   // פתיחת שיחה אחת
-  function openChat(uid, title) {
+  function openChat(uid, title, email, name) {
     if (stopMsgs) stopMsgs();
-    openUid = uid;
+    openUid = uid; openEmail = email || ""; openName = name || "";
     $("chatTitle").textContent = title;
     $("chatBack").classList.toggle("hidden", !isAdmin);
     $("chatList").classList.add("hidden");
@@ -545,7 +508,8 @@
         const mine = isAdmin ? m.from === "admin" : m.from === "user";
         const div = document.createElement("div");
         div.className = "bubble " + (mine ? "me" : "them");
-        div.textContent = m.text;
+        if (m.file) div.appendChild(renderFile(m.file));
+        if (m.text) div.appendChild(document.createTextNode(m.text));
         const t = document.createElement("time");
         t.textContent = fmt(m.ts);
         div.appendChild(t);
@@ -555,51 +519,119 @@
     }, err => { $("chatMsgs").innerHTML = '<p class="chat-empty">שגיאה בטעינה: ' + err.code + '</p>'; });
   }
 
-  async function sendMsg() {
+  async function sendMsg(file) {
     const text = $("chatInput").value.trim();
-    if (!text || !openUid) return;
+    if ((!text && !file) || !openUid) return;
     $("chatInput").value = "";
     const ref = db.collection("chats").doc(openUid);
     const now = firebase.firestore.FieldValue.serverTimestamp();
-    const info = { updated: now, last: text.slice(0, 60) };
+    const preview = (file ? "📎 " + file.name + (text ? " – " : "") : "") + text;
+    const info = { updated: now, last: preview.slice(0, 60) };
     if (isAdmin) Object.assign(info, { unreadAdmin: false, unreadUser: true });
     else Object.assign(info, { name: me.displayName || "", email: me.email || "", unreadAdmin: true });
+    const msg = { text, from: isAdmin ? "admin" : "user", ts: now };
+    if (file) msg.file = file;
     // שני הכתיבות יחד – ההודעה מופיעה מיד בחלון
     const batch = db.batch();
     batch.set(ref, info, { merge: true });
-    batch.set(ref.collection("messages").doc(), { text, from: isAdmin ? "admin" : "user", ts: now });
-    const timeout = new Promise((_, rej) => setTimeout(() => rej({ code: "timeout" }), 12000));
+    batch.set(ref.collection("messages").doc(), msg);
+    const timeout = new Promise((_, rej) => setTimeout(() => rej({ code: "timeout" }), file ? 30000 : 12000));
     try {
       await Promise.race([batch.commit(), timeout]);
-      if (isAdmin) askEmailCopy(ref, text);
+      if (isAdmin) notifyByMail(openUid, openEmail, openName, preview);
     } catch (e) {
+      $("chatInput").value = text;
       const why = {
         "permission-denied": "אין הרשאה. צריך להדביק את הכללים (Rules) ב-Firestore וללחוץ פרסום.",
         "not-found": "מסד הנתונים Firestore עוד לא נוצר ב-Firebase.",
+        "invalid-argument": "הקובץ גדול מדי.",
         "timeout": "אין חיבור לשרת ההודעות. ייתכן ש-Firestore עוד לא נוצר ב-Firebase, או שהסינון חוסם את firestore.googleapis.com."
       }[e.code] || ("שגיאה: " + (e.code || e.message));
       alert("ההודעה לא נשלחה.\n" + why);
     }
   }
-  // אחרי שהמנהל שולח הודעה: שואל אם לשלוח אותה גם למייל של המשתמש
-  async function askEmailCopy(ref, text) {
-    try {
-      const chat = (await ref.get()).data() || {};
-      if (!chat.email) return;
-      if (!MAIL_SCRIPT_URL.startsWith("https://")) { alert("עוד לא הודבקה כתובת הסקריפט (MAIL_SCRIPT_URL), ולכן אי אפשר לשלוח למייל."); return; }
-      if (!confirm("לשלוח את ההודעה גם למייל של " + (chat.name || chat.email) + "?\n" + chat.email)) return;
-      const idToken = await me.getIdToken();
-      const res = await fetch(MAIL_SCRIPT_URL, {
-        method: "POST",
-        body: JSON.stringify({ type: "message", idToken, to: chat.email, name: chat.name || "", text })
-      });
-      const out = await res.json().catch(() => ({}));
-      alert(out.ok ? "נשלח גם למייל ✔" : "השליחה למייל נכשלה" + (out.error ? ": " + out.error : ""));
-    } catch (e) {
-      alert("השליחה למייל נכשלה. ייתכן שהסינון חוסם את script.google.com.");
+
+  /* ===== צירוף קבצים ===== */
+  const MAX_FILE = 700 * 1024; // מגבלה של מסד הנתונים החינמי
+  const readAsDataURL = f => new Promise((res, rej) => {
+    const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f);
+  });
+  // תמונות מוקטנות אוטומטית כדי שייכנסו
+  async function shrinkImage(f) {
+    const url = await readAsDataURL(f);
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    let w = img.width, h = img.height;
+    for (const [max, q] of [[1600, .85], [1280, .8], [1000, .75], [800, .7], [600, .6]]) {
+      const k = Math.min(1, max / Math.max(w, h));
+      const c = document.createElement("canvas");
+      c.width = Math.round(w * k); c.height = Math.round(h * k);
+      const g = c.getContext("2d");
+      g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(img, 0, 0, c.width, c.height);
+      const out = c.toDataURL("image/jpeg", q);
+      if (out.length * .75 < MAX_FILE) return out;
     }
+    throw new Error("big");
   }
-  $("chatSendBtn").onclick = sendMsg;
+  const kb = n => n < 1024 * 1024 ? Math.round(n / 1024) + " KB" : (n / 1048576).toFixed(1) + " MB";
+
+  $("chatAttach").onclick = () => $("chatFile").click();
+  $("chatFile").onchange = async () => {
+    const f = $("chatFile").files[0];
+    $("chatFile").value = "";
+    if (!f || !openUid) return;
+    const isImg = /^image\/(png|jpe?g|gif|webp|bmp)$/i.test(f.type);
+    if (!isImg && f.size > MAX_FILE) {
+      alert("הקובץ גדול מדי (" + kb(f.size) + "). אפשר לשלוח קבצים עד 700KB.\nלקובץ גדול יותר, העלו אותו ל-Google Drive ושלחו את הקישור בצ'אט.");
+      return;
+    }
+    const note = document.createElement("div");
+    note.className = "chat-sending"; note.textContent = "שולח את " + f.name + "...";
+    $("chatMsgs").appendChild(note); $("chatMsgs").scrollTop = $("chatMsgs").scrollHeight;
+    try {
+      const data = isImg && f.type !== "image/gif" ? await shrinkImage(f) : await readAsDataURL(f);
+      const name = isImg && f.type !== "image/gif" ? f.name.replace(/\.[^.]+$/, "") + ".jpg" : f.name;
+      await sendMsg({ name: name.slice(0, 100), type: isImg ? "image" : "file", size: Math.round(data.length * .75), data });
+    } catch (e) {
+      alert("לא הצלחתי לצרף את הקובץ. נסו קובץ קטן יותר.");
+    }
+    note.remove();
+  };
+
+  // הצגת קובץ בתוך בועה – תמונה מוצגת, קובץ אחר יורד בלחיצה
+  function renderFile(file) {
+    const b64 = String(file.data || "").split(",")[1] || "";
+    if (file.type === "image" && /^data:image\/(png|jpe?g|gif|webp|bmp);base64,/i.test(file.data)) {
+      const img = document.createElement("img");
+      img.src = file.data; img.alt = file.name || "תמונה";
+      img.onclick = () => { const w = window.open(); if (w) w.document.write('<img src="' + file.data + '" style="max-width:100%">'); };
+      return img;
+    }
+    const a = document.createElement("a");
+    a.className = "file";
+    a.href = "data:application/octet-stream;base64," + b64; // תמיד הורדה, אף פעם לא נפתח כדף
+    a.download = file.name || "file";
+    a.innerHTML = "<span>📄</span><span><span></span><small></small></span>";
+    a.querySelector("span span").textContent = file.name || "קובץ";
+    a.querySelector("small").textContent = "לחצו להורדה · " + kb(file.size || b64.length * .75);
+    return a;
+  }
+
+  // התראה במייל למשתמש כשהמנהל עונה
+  async function notifyByMail(uid, to, name, text) {
+    if (!MAIL_URL || !to) return;
+    if (lastMailed[uid] && Date.now() - lastMailed[uid] < 5 * 60 * 1000) return;
+    lastMailed[uid] = Date.now();
+    try {
+      const idToken = await me.getIdToken();
+      await fetch(MAIL_URL, {
+        method: "POST", mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ idToken, to, name, text })
+      });
+    } catch (e) { /* המייל הוא תוספת – הצ'אט עובד גם בלעדיו */ }
+  }
+  $("chatSendBtn").onclick = () => sendMsg();
   $("chatInput").addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(); }
   });
