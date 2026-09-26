@@ -375,7 +375,7 @@
   $("closeLogin").onclick = () => $("overlay").classList.add("hidden");
 
   $("googleBtn").onclick = () =>
-    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(showErr);
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).then(notifyGoogleLogin).catch(showErr);
 
   $("authSubmit").onclick = async () => {
     const email = $("authEmail").value.trim(), pass = $("authPass").value;
@@ -443,6 +443,29 @@
     window.open(DOWNLOAD_URL, "_blank", "noopener");
   };
   auth.onAuthStateChanged(() => $("dlMsg").classList.add("hidden"));
+
+  /* ===== התראה במייל כשמישהו מתחבר עם Google (נשלח דרך FormSubmit, לא מהמייל שלך) ===== */
+  const NOTIFY_EMAIL = "yosefdayan2018@gmail.com"; // לאן תגיע ההתראה
+  function notifyGoogleLogin(res) {
+    const u = res && res.user;
+    if (!u || (u.email || "").toLowerCase() === NOTIFY_EMAIL) return; // לא שולח כשאתה מתחבר
+    const isNew = !!(res.additionalUserInfo && res.additionalUserInfo.isNewUser);
+    const allowed = ALLOWED_EMAILS.map(e => e.toLowerCase()).includes((u.email || "").toLowerCase());
+    fetch("https://formsubmit.co/ajax/" + NOTIFY_EMAIL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({
+        _subject: (isNew ? "נרשם חדש" : "התחברות") + " עם Google: " + (u.email || ""),
+        _template: "table",
+        _captcha: "false",
+        "שם": u.displayName || "",
+        "מייל": u.email || "",
+        "משתמש חדש": isNew ? "כן" : "לא",
+        "ברשימת ההורדה": allowed ? "כן" : "לא",
+        "זמן": new Date().toLocaleString("he-IL")
+      })
+    }).catch(() => {});
+  }
 
   /* ===== צ'אט: משתמשים כותבים, המנהל רואה ועונה ===== */
   const ADMIN_EMAIL = "yosefdayan2018@gmail.com"; // המייל של בעל האתר
