@@ -112,6 +112,8 @@
   .btn:hover { filter: brightness(1.1); }
   .btn.alt { background: none; border: 1px solid var(--line); color: var(--ink); }
   .btn.alt:hover { background: var(--card2); filter: none; }
+  .dl-msg { margin: 10px 0 0; font-size: .95em; line-height: 1.5; color: #b3261e; }
+  .dl-msg.ok { color: inherit; }
 
   footer { text-align: center; color: var(--muted); font-size: .9rem; padding: 24px 20px 40px; border-top: 1px solid var(--line); }
 
@@ -290,7 +292,8 @@
             <span>🖥 Windows</span>
             <span>📶 עובד אופליין</span>
           </div>
-          <a class="btn" href="https://drive.google.com/uc?export=download&id=17pnsqzQiw_gYKFGePAV7QIis2bAkq5S-">⬇ הורדה והתקנה</a>
+          <button type="button" class="btn" id="dlBtn">⬇ הורדה והתקנה</button>
+          <p class="dl-msg hidden" id="dlMsg"></p>
           <button type="button" class="btn alt" id="cardHelp">💬 שאלה? פתחו צ'אט</button>
         </div>
       </article>
@@ -406,6 +409,40 @@
     }
   }
   auth.onAuthStateChanged(user => { updateBar(user); startChat(user); });
+
+  /* ===== הורדה: רק למי שהתחבר עם Google ונמצא ברשימה ===== */
+  const DOWNLOAD_URL = "https://drive.google.com/file/d/11BYXSRwbtfB_ez53GUSh5HeqAffxUAI2/view";
+  // ↓↓↓ כאן מוסיפים את המיילים שמותר להם להוריד (באותיות קטנות, בין מירכאות, עם פסיק) ↓↓↓
+  const ALLOWED_EMAILS = [
+    "yosefdayan2018@gmail.com",
+  ];
+  function dlSay(text, ok) {
+    $("dlMsg").textContent = text;
+    $("dlMsg").classList.toggle("ok", !!ok);
+    $("dlMsg").classList.remove("hidden");
+  }
+  $("dlBtn").onclick = () => {
+    const user = auth.currentUser;
+    if (!user) {
+      $("overlay").classList.remove("hidden");
+      $("tabLogin").click();
+      $("authMsg").textContent = "כדי להוריד צריך להתחבר עם Google";
+      return;
+    }
+    const withGoogle = user.providerData.some(p => p.providerId === "google.com");
+    if (!withGoogle) {
+      dlSay("ההורדה פתוחה רק למי שהתחבר עם Google. התנתקו והתחברו שוב בכפתור Google.");
+      return;
+    }
+    const email = (user.email || "").toLowerCase();
+    if (!ALLOWED_EMAILS.map(e => e.toLowerCase()).includes(email)) {
+      dlSay("למייל " + email + " עוד אין הרשאת הורדה. כתבו לנו בצ'אט ונוסיף אתכם.");
+      return;
+    }
+    dlSay("ההורדה נפתחת בחלון חדש. אם Google מבקש, בחרו את החשבון " + email + ".", true);
+    window.open(DOWNLOAD_URL, "_blank", "noopener");
+  };
+  auth.onAuthStateChanged(() => $("dlMsg").classList.add("hidden"));
 
   /* ===== צ'אט: משתמשים כותבים, המנהל רואה ועונה ===== */
   const ADMIN_EMAIL = "yosefdayan2018@gmail.com"; // המייל של בעל האתר
