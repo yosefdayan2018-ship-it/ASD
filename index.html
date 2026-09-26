@@ -444,7 +444,7 @@
   };
   auth.onAuthStateChanged(() => $("dlMsg").classList.add("hidden"));
 
-  /* ===== התראה במייל כשמישהו מתחבר עם Google (נשלח דרך FormSubmit, לא מהמייל שלך) ===== */
+  /* ===== מייל למשתמש שהתחבר עם Google (נשלח דרך FormSubmit, לא מהמייל שלך) ===== */
   const NOTIFY_EMAIL = "yosefdayan2018@gmail.com"; // לאן תגיע ההתראה
   function notifyGoogleLogin(res) {
     const u = res && res.user;
@@ -458,8 +458,14 @@
         _subject: (isNew ? "נרשם חדש" : "התחברות") + " עם Google: " + (u.email || ""),
         _template: "table",
         _captcha: "false",
+        _autoresponse: (u.displayName ? "שלום " + u.displayName + ",\n\n" : "שלום,\n\n") +
+          "התחברת עכשיו לאתר אוטובוסים עם חשבון Google (" + u.email + ").\n" +
+          (allowed
+            ? "יש לך הרשאה להוריד את התוכנה. אפשר ללחוץ באתר על 'הורדה והתקנה'."
+            : "עדיין אין לך הרשאה להוריד את התוכנה. כדי לקבל הרשאה, כתבו לנו בצ'אט באתר.") +
+          "\n\nאם לא אתה התחברת, אפשר להתעלם מההודעה.",
         "שם": u.displayName || "",
-        "מייל": u.email || "",
+        email: u.email || "",
         "משתמש חדש": isNew ? "כן" : "לא",
         "ברשימת ההורדה": allowed ? "כן" : "לא",
         "זמן": new Date().toLocaleString("he-IL")
