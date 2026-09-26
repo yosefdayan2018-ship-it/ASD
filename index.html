@@ -444,32 +444,19 @@
   };
   auth.onAuthStateChanged(() => $("dlMsg").classList.add("hidden"));
 
-  /* ===== מייל למשתמש שהתחבר עם Google (נשלח דרך FormSubmit, לא מהמייל שלך) ===== */
-  const NOTIFY_EMAIL = "yosefdayan2018@gmail.com"; // לאן תגיע ההתראה
+  /* ===== מייל למשתמש שהתחבר עם Google (נשלח מחשבון נפרד דרך Google Apps Script) ===== */
+  // ↓↓↓ כאן מדביקים את כתובת ה-Web app מ-Apps Script (ראו הסבר) ↓↓↓
+  const MAIL_SCRIPT_URL = "הדביקו-כאן-את-כתובת-הסקריפט";
+  const OWNER_EMAIL = "yosefdayan2018@gmail.com"; // כשאתה מתחבר לא נשלח מייל
   function notifyGoogleLogin(res) {
     const u = res && res.user;
-    if (!u || (u.email || "").toLowerCase() === NOTIFY_EMAIL) return; // לא שולח כשאתה מתחבר
-    const isNew = !!(res.additionalUserInfo && res.additionalUserInfo.isNewUser);
-    const allowed = ALLOWED_EMAILS.map(e => e.toLowerCase()).includes((u.email || "").toLowerCase());
-    fetch("https://formsubmit.co/ajax/" + NOTIFY_EMAIL, {
+    if (!u || !u.email || u.email.toLowerCase() === OWNER_EMAIL) return;
+    if (!MAIL_SCRIPT_URL.startsWith("https://")) return;
+    const allowed = ALLOWED_EMAILS.map(e => e.toLowerCase()).includes(u.email.toLowerCase());
+    fetch(MAIL_SCRIPT_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
-      body: JSON.stringify({
-        _subject: (isNew ? "נרשם חדש" : "התחברות") + " עם Google: " + (u.email || ""),
-        _template: "table",
-        _captcha: "false",
-        _autoresponse: (u.displayName ? "שלום " + u.displayName + ",\n\n" : "שלום,\n\n") +
-          "התחברת עכשיו לאתר אוטובוסים עם חשבון Google (" + u.email + ").\n" +
-          (allowed
-            ? "יש לך הרשאה להוריד את התוכנה. אפשר ללחוץ באתר על 'הורדה והתקנה'."
-            : "עדיין אין לך הרשאה להוריד את התוכנה. כדי לקבל הרשאה, כתבו לנו בצ'אט באתר.") +
-          "\n\nאם לא אתה התחברת, אפשר להתעלם מההודעה.",
-        "שם": u.displayName || "",
-        email: u.email || "",
-        "משתמש חדש": isNew ? "כן" : "לא",
-        "ברשימת ההורדה": allowed ? "כן" : "לא",
-        "זמן": new Date().toLocaleString("he-IL")
-      })
+      mode: "no-cors",
+      body: JSON.stringify({ email: u.email, name: u.displayName || "", allowed })
     }).catch(() => {});
   }
 
@@ -584,6 +571,7 @@
     const timeout = new Promise((_, rej) => setTimeout(() => rej({ code: "timeout" }), 12000));
     try {
       await Promise.race([batch.commit(), timeout]);
+      if (isAdmin) askEmailCopy(ref, text);
     } catch (e) {
       const why = {
         "permission-denied": "אין הרשאה. צריך להדביק את הכללים (Rules) ב-Firestore וללחוץ פרסום.",
@@ -591,6 +579,24 @@
         "timeout": "אין חיבור לשרת ההודעות. ייתכן ש-Firestore עוד לא נוצר ב-Firebase, או שהסינון חוסם את firestore.googleapis.com."
       }[e.code] || ("שגיאה: " + (e.code || e.message));
       alert("ההודעה לא נשלחה.\n" + why);
+    }
+  }
+  // אחרי שהמנהל שולח הודעה: שואל אם לשלוח אותה גם למייל של המשתמש
+  async function askEmailCopy(ref, text) {
+    try {
+      const chat = (await ref.get()).data() || {};
+      if (!chat.email) return;
+      if (!MAIL_SCRIPT_URL.startsWith("https://")) { alert("עוד לא הודבקה כתובת הסקריפט (MAIL_SCRIPT_URL), ולכן אי אפשר לשלוח למייל."); return; }
+      if (!confirm("לשלוח את ההודעה גם למייל של " + (chat.name || chat.email) + "?\n" + chat.email)) return;
+      const idToken = await me.getIdToken();
+      const res = await fetch(MAIL_SCRIPT_URL, {
+        method: "POST",
+        body: JSON.stringify({ type: "message", idToken, to: chat.email, name: chat.name || "", text })
+      });
+      const out = await res.json().catch(() => ({}));
+      alert(out.ok ? "נשלח גם למייל ✔" : "השליחה למייל נכשלה" + (out.error ? ": " + out.error : ""));
+    } catch (e) {
+      alert("השליחה למייל נכשלה. ייתכן שהסינון חוסם את script.google.com.");
     }
   }
   $("chatSendBtn").onclick = sendMsg;
